@@ -64,7 +64,7 @@ class raw_env(SimpleEnv, EzPickle):
     def __init__(
         self,
         N=3,
-        local_ratio=0.5,
+        local_ratio=1,
         max_cycles=25,
         continuous_actions=False,
         render_mode=None,
@@ -99,12 +99,21 @@ parallel_env = parallel_wrapper_fn(env)
 
 
 class Scenario(BaseScenario):
+    def generate_colors(self, N):
+        # generates N distinct colors
+        colors = []
+        for i in range(N):
+            color = np.random.rand(3)
+            colors.append(color)
+        return colors
+
     def make_world(self, N=3):
         world = World()
         # set any world properties first
         world.dim_c = 2
         num_agents = N
         num_landmarks = N
+        colors = self.generate_colors(N)
         world.collaborative = True
         # add agents
         world.agents = [Agent() for i in range(num_agents)]
@@ -113,21 +122,25 @@ class Scenario(BaseScenario):
             agent.collide = True
             agent.silent = True
             agent.size = 0.15
+            agent.color = colors[i]
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = "landmark %d" % i
             landmark.collide = False
             landmark.movable = False
+            landmark.color = colors[i]
         return world
 
     def reset_world(self, world, np_random):
         # random properties for agents
         for i, agent in enumerate(world.agents):
-            agent.color = np.array([0.35, 0.35, 0.85])
+            # agent.color = np.array([0.35, 0.35, 0.85])
+            pass
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
-            landmark.color = np.array([0.25, 0.25, 0.25])
+            # landmark.color = np.array([1, 0.25, 0.25])
+            pass
         # set random initial states
         for agent in world.agents:
             agent.state.p_pos = np_random.uniform(-1, +1, world.dim_p)
@@ -170,6 +183,10 @@ class Scenario(BaseScenario):
         if agent.collide:
             for a in world.agents:
                 rew -= 1.0 * (self.is_collision(a, agent) and a != agent)
+        agent_id = int(agent.name.split("_")[1])
+
+        dist = np.sqrt(np.sum(np.square(agent.state.p_pos - world.landmarks[agent_id].state.p_pos)))
+        rew -= dist
         return rew
 
     def global_reward(self, world):
