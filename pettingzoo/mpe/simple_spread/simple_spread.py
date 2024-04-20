@@ -123,6 +123,8 @@ class Scenario(BaseScenario):
             agent.silent = True
             agent.size = 0.15
             agent.color = colors[i]
+            # select a uniform[0,2] random reward scaler
+            agent.scaler = np.random.rand() * 2
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
@@ -187,7 +189,7 @@ class Scenario(BaseScenario):
 
         dist = np.sqrt(np.sum(np.square(agent.state.p_pos - world.landmarks[agent_id].state.p_pos)))
         rew -= dist
-        return rew
+        return rew * agent.scaler
 
     def global_reward(self, world):
         rew = 0
