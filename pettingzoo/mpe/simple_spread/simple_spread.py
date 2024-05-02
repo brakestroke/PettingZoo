@@ -189,7 +189,7 @@ class Scenario(BaseScenario):
 
         dist = np.sqrt(np.sum(np.square(agent.state.p_pos - world.landmarks[agent_id].state.p_pos)))
         rew -= dist
-        return rew * agent.scaler
+        return rew
 
     def global_reward(self, world):
         rew = 0
@@ -206,14 +206,19 @@ class Scenario(BaseScenario):
         entity_pos = []
         for entity in world.landmarks:  # world.entities:
             entity_pos.append(entity.state.p_pos - agent.state.p_pos)
+
         # communication of all other agents
+        agent_id = int(agent.name.split("_")[1])
         comm = []
         other_pos = []
+        other_vel = []
         for other in world.agents:
             if other is agent:
                 continue
+            other_vel.append(other.state.p_vel)
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
         return np.concatenate(
-            [agent.state.p_pos] + entity_pos + other_pos
+            #[agent.state.p_vel] + [agent.state.p_pos] + [world.landmarks[agent_id].state.p_pos]
+            [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos
         )
