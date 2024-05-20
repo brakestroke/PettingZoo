@@ -180,8 +180,8 @@ class WaterworldBase:
                 Evaders(
                     x,
                     y,
-                    vx[0],
-                    vy[0],
+                    vx,
+                    vy,
                     radius=2 * self.base_radius,
                     collision_type=i + 1000,
                     max_speed=self.evader_speed,
@@ -198,8 +198,8 @@ class WaterworldBase:
                 Poisons(
                     x,
                     y,
-                    vx[0],
-                    vy[0],
+                    vx,
+                    vy,
                     radius=0.75 * self.base_radius,
                     collision_type=i + 2000,
                     max_speed=self.poison_speed,

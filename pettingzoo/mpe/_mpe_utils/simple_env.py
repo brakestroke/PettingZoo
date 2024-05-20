@@ -9,7 +9,7 @@ from gymnasium.utils import seeding
 from pettingzoo import AECEnv
 from pettingzoo.mpe._mpe_utils.core import Agent
 from pettingzoo.utils import wrappers
-from pettingzoo.utils.agent_selector import AgentSelector
+from pettingzoo.utils.agent_selector import agent_selector
 
 alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -48,8 +48,10 @@ class SimpleEnv(AECEnv):
         self.render_mode = render_mode
         pygame.init()
         self.viewer = None
-        self.width = 700
-        self.height = 700
+        #self.width = 700
+        #self.height = 700
+        self.width = 1400
+        self.height = 1400
         self.screen = pygame.Surface([self.width, self.height])
         self.max_size = 1
         self.game_font = pygame.freetype.Font(
@@ -75,7 +77,7 @@ class SimpleEnv(AECEnv):
             agent.name: idx for idx, agent in enumerate(self.world.agents)
         }
 
-        self._agent_selector = AgentSelector(self.agents)
+        self._agent_selector = agent_selector(self.agents)
 
         # set spaces
         self.action_spaces = dict()

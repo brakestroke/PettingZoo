@@ -79,8 +79,6 @@ class Agent(Entity):  # properties of agent entities
         self.action = Action()
         # script behavior to execute
         self.action_callback = None
-        # reward scaler
-        self.scaler = 1
 
 
 class World:  # multi-agent world

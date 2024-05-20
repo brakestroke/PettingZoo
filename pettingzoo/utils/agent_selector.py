@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
-from warnings import warn
 
 
-class AgentSelector:
+class agent_selector:
     """Outputs an agent in the given order whenever agent_select is called.
 
     Can reinitialize to a new order.
 
     Example:
-        >>> from pettingzoo.utils import AgentSelector
-        >>> agent_selector = AgentSelector(agent_order=["player1", "player2"])
+        >>> from pettingzoo.utils import agent_selector
+        >>> agent_selector = agent_selector(agent_order=["player1", "player2"])
         >>> agent_selector.reset()
         'player1'
         >>> agent_selector.next()
@@ -53,8 +52,8 @@ class AgentSelector:
         """Check if the current agent is the first agent in the cycle."""
         return self.selected_agent == self.agent_order[0]
 
-    def __eq__(self, other: AgentSelector) -> bool:
-        if not isinstance(other, AgentSelector):
+    def __eq__(self, other: agent_selector) -> bool:
+        if not isinstance(other, agent_selector):
             return NotImplemented
 
         return (
@@ -62,14 +61,3 @@ class AgentSelector:
             and self._current_agent == other._current_agent
             and self.selected_agent == other.selected_agent
         )
-
-
-class agent_selector(AgentSelector):
-    """Deprecated version of AgentSelector. Use that instead."""
-
-    def __init__(self, *args, **kwargs):
-        warn(
-            "agent_selector is deprecated, please use AgentSelector",
-            DeprecationWarning,
-        )
-        super().__init__(*args, **kwargs)

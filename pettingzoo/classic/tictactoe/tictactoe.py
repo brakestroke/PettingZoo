@@ -80,7 +80,7 @@ from gymnasium.utils import EzPickle
 
 from pettingzoo import AECEnv
 from pettingzoo.classic.tictactoe.board import Board
-from pettingzoo.utils import AgentSelector, wrappers
+from pettingzoo.utils import agent_selector, wrappers
 
 
 def get_image(path):
@@ -99,8 +99,11 @@ def get_font(path, size):
     return font
 
 
-def env(**kwargs):
-    env = raw_env(**kwargs)
+def env(render_mode=None):
+    internal_render_mode = render_mode if render_mode != "ansi" else "human"
+    env = raw_env(render_mode=internal_render_mode)
+    if render_mode == "ansi":
+        env = wrappers.CaptureStdoutWrapper(env)
     env = wrappers.TerminateIllegalWrapper(env, illegal_reward=-1)
     env = wrappers.AssertOutOfBoundsWrapper(env)
     env = wrappers.OrderEnforcingWrapper(env)
@@ -143,7 +146,7 @@ class raw_env(AECEnv, EzPickle):
         self.truncations = {i: False for i in self.agents}
         self.infos = {i: {"legal_moves": list(range(0, 9))} for i in self.agents}
 
-        self._agent_selector = AgentSelector(self.agents)
+        self._agent_selector = agent_selector(self.agents)
         self.agent_selection = self._agent_selector.reset()
 
         self.render_mode = render_mode
