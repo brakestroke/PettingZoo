@@ -50,8 +50,8 @@ class SimpleEnv(AECEnv):
         self.viewer = None
         #self.width = 700
         #self.height = 700
-        self.width = 1400
-        self.height = 1400
+        self.width = 700
+        self.height = 700
         self.screen = pygame.Surface([self.width, self.height])
         self.max_size = 1
         self.game_font = pygame.freetype.Font(
@@ -178,7 +178,8 @@ class SimpleEnv(AECEnv):
             if not agent.silent:
                 scenario_action.append(action)
             self._set_action(scenario_action, agent, self.action_spaces[agent.name])
-
+            agent.last_action_num = action
+            
         self.world.step()
 
         global_reward = 0.0
@@ -258,7 +259,7 @@ class SimpleEnv(AECEnv):
                     self.truncations[a] = True
         else:
             self._clear_rewards()
-
+        
         self._cumulative_rewards[cur_agent] = 0
         self._accumulate_rewards()
 

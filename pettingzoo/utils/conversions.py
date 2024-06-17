@@ -1,4 +1,5 @@
 # pyright: reportGeneralTypeIssues=false
+import numpy as np
 import copy
 import warnings
 from collections import defaultdict
@@ -193,6 +194,7 @@ class aec_to_parallel_wrapper(ParallelEnv[AgentID, ObsType, ActionType]):
         truncations = {}
         infos = {}
         observations = {}
+
         for agent in self.aec_env.agents:
             if agent != self.aec_env.agent_selection:
                 if self.aec_env.terminations[agent] or self.aec_env.truncations[agent]:
@@ -219,12 +221,29 @@ class aec_to_parallel_wrapper(ParallelEnv[AgentID, ObsType, ActionType]):
             or self.aec_env.truncations[self.aec_env.agent_selection]
         ):
             self.aec_env.step(None)
+        
+        """ 
+        agents_to_truncate = []
+        for agent1 in self.aec_env.world.agents:
+            for agent2 in self.aec_env.world.agents:
+                if agent1 is not agent2 and self.is_collision(agent1, agent2):
+                    agents_to_truncate.extend([agent1, agent2])
+        agents_to_truncate = set(agents_to_truncate)
+        for agent in agents_to_truncate:
+            self.aec_env.truncations[agent.name] = True
+        """
 
         self.agents = self.aec_env.agents
         return observations, rewards, terminations, truncations, infos
 
     def render(self):
         return self.aec_env.render()
+
+    def is_collision(self, agent1, agent2):
+        delta_pos = agent1.state.p_pos - agent2.state.p_pos
+        dist = np.sqrt(np.sum(np.square(delta_pos)))
+        dist_min = agent1.size + agent2.size
+        return True if dist < dist_min else False
 
     def state(self):
         return self.aec_env.state()

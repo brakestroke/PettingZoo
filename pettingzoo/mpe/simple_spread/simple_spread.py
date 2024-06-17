@@ -52,6 +52,7 @@ simple_spread_v3.env(N=3, local_ratio=0.5, max_cycles=25, continuous_actions=Fal
 """
 
 import numpy as np
+import random
 from gymnasium.utils import EzPickle
 
 from pettingzoo.mpe._mpe_utils.core import Agent, Landmark, World
@@ -112,7 +113,7 @@ class Scenario(BaseScenario):
 
 
 
-        self.communication_reach = N//2
+        self.communication_reach = 2
         self.N = N
 
 
@@ -133,7 +134,7 @@ class Scenario(BaseScenario):
             agent.collide = True
             agent.silent = True
             agent.size = 0.15
-            agent.color = colors[i]
+            #agent.color = colors[i]
 
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
@@ -141,18 +142,16 @@ class Scenario(BaseScenario):
             landmark.name = "landmark %d" % i
             landmark.collide = False
             landmark.movable = False
-            landmark.color = colors[i]
+            #landmark.color = colors[i]
         return world
 
     def reset_world(self, world, np_random):
         # random properties for agents
         for i, agent in enumerate(world.agents):
-            #agent.color = np.array([0.35, 0.35, 0.85])
-            pass
+            agent.color = np.array([0.35, 0.35, 0.85])
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
-            #landmark.color = np.array([0.25, 0.25, 0.25])
-            pass
+            landmark.color = np.array([0.25, 0.25, 0.25])
         # set random initial states
         for agent in world.agents:
             agent.state.p_pos = np_random.uniform(-1, +1, world.dim_p)
@@ -191,15 +190,54 @@ class Scenario(BaseScenario):
 
     def reward(self, agent, world):
         # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
+        """ 
         rew = 0
+        dists = []
+        for other in world.agents:
+            if other is agent:
+                continue
+            dists.append(np.sqrt(np.sum(np.square(agent.state.p_pos - other.state.p_pos))))
+
+        rew += min(dists)
+        
+        """ 
+        rew = 0
+        for l in world.landmarks:
+            dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
+            rew -= min(dists)
+
         if agent.collide:
             for a in world.agents:
                 rew -= 1.0 * (self.is_collision(a, agent) and a != agent)
+
+        """
+        if any(agent.action.u):
+            rew -= 0.01
+        print("--")
+        print(agent.state.last_p_pos)
+        print(agent.state.p_pos)
+        """
+        #if agent.state.last_p_pos != agent.state.p_pos:
+
+        """
+        for lm in world.landmarks:
+            dists = [np.sqrt(np.sum(np.square(agent.state.p_pos - lm.state.p_pos)))]
+            rew -= min(dists)
+        """
+
         return rew
 
     def global_reward(self, world):
-        rew = 0
         """
+        agents_to_remove = []
+        for agent1 in world.agents:
+            for agent2 in world.agents:
+                if agent1 is not agent2 and self.is_collision(agent1, agent2):
+                    agents_to_remove.extend([agent1, agent2])
+        world.agents = [x for x in world.agents if x not in agents_to_remove]
+        """
+
+        rew = 0
         for lm in world.landmarks:
             dists = [
                 np.sqrt(np.sum(np.square(a.state.p_pos - lm.state.p_pos)))
@@ -211,12 +249,12 @@ class Scenario(BaseScenario):
             agent_id = int(agent.name.split("_")[1])
             dist = np.sqrt(np.sum(np.square(agent.state.p_pos - world.landmarks[agent_id].state.p_pos)))
             rew -= dist
+        """
         return rew
 
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
-    
-        """
+        """ 
         sorted_entities = []
         for id, entity in enumerate(world.landmarks):  # world.entities:
             distance = np.sqrt(np.sum(np.power(entity.state.p_pos - agent.state.p_pos, 2)))
@@ -231,7 +269,7 @@ class Scenario(BaseScenario):
                     sorted_entities.append((distance, id, entity))
                     break
         """
-
+        """
         sorted_agents = []
         for id, other in enumerate(world.agents):  # world.entities:
             if other is agent:
@@ -256,20 +294,27 @@ class Scenario(BaseScenario):
         #landmark_delta = [x[2].state.p_pos - agent.state.p_pos for x in reachable_entities]
 
         #agent_ids = np.array([x[1] * (1 / (self.N - 1)) for x in reachable_agents])
-        agent_delta = [x[2].state.p_pos - agent.state.p_pos for x in reachable_agents]
-            
+        agent_delta_pos = [x[2].state.p_pos - agent.state.p_pos for x in reachable_agents]
+        agent_vel = [x[2].state.p_vel for x in reachable_agents]
+        
+        #comm = [x[2].state.c for x in reachable_agents]
         """
+
+        
         entity_pos = []
         for entity in world.landmarks:
             entity_pos.append(entity.state.p_pos - agent.state.p_pos)
+
+
         # communication of all other agents
-        comm = []
         other_pos = []
         for other in world.agents:
             if other is agent:
                 continue
             #comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
+
+        """
         print([agent.state.p_vel])
         print([agent.state.p_pos])
         print(entity_pos)
@@ -277,15 +322,15 @@ class Scenario(BaseScenario):
         print(comm)
         print("---")
         """
-        agent_id = int(agent.name.split("_")[1])
-        landmark_delta = agent.state.p_pos - world.landmarks[agent_id].state.p_pos
+        #agent_id = int(agent.name.split("_")[1])
+        #landmark_delta = agent.state.p_pos - world.landmarks[agent_id].state.p_pos
 
         observation = np.concatenate(
-            #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm
-            #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos
+            [agent.state.p_vel] + [agent.state.p_pos] + entity_pos
+            #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos
             #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos + comm
             #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos
-            [agent.state.p_vel] + [agent.state.p_pos] + [landmark_delta]
-            #[agent.state.p_vel] + [agent.state.p_pos] + [landmark_delta] + agent_delta
+            #[agent.state.p_vel] + [agent.state.p_pos] + [landmark_delta] 
+            #[agent.state.p_vel] + [agent.state.p_pos] + [landmark_delta] + agent_delta_pos + agent_vel
         )
         return observation
