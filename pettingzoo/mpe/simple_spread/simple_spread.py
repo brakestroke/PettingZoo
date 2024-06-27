@@ -109,16 +109,11 @@ class Scenario(BaseScenario):
         return colors
 
     def make_world(self, N=3):
-
-
-
-
-        self.communication_reach = 2
-        self.N = N
-
-
-
-
+        # pyrros edit
+        self.communication_reach = 3
+        self.curriculum_learning = False
+        self.centralized = False
+        # hello to anyone reading :D
 
         world = World()
         # set any world properties first
@@ -190,22 +185,17 @@ class Scenario(BaseScenario):
 
     def reward(self, agent, world):
         # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
-        """ 
         rew = 0
-        dists = []
-        for other in world.agents:
-            if other is agent:
-                continue
-            dists.append(np.sqrt(np.sum(np.square(agent.state.p_pos - other.state.p_pos))))
-
-        rew += min(dists)
-        
-        """ 
-        rew = 0
+        """
+        if self.centralized:
+            for l in world.landmarks:
+                dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
+                rew -= min(dists)
+        """
         for l in world.landmarks:
             dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
             rew -= min(dists)
-
+        
         if agent.collide:
             for a in world.agents:
                 rew -= 1.0 * (self.is_collision(a, agent) and a != agent)
@@ -216,13 +206,6 @@ class Scenario(BaseScenario):
         print("--")
         print(agent.state.last_p_pos)
         print(agent.state.p_pos)
-        """
-        #if agent.state.last_p_pos != agent.state.p_pos:
-
-        """
-        for lm in world.landmarks:
-            dists = [np.sqrt(np.sum(np.square(agent.state.p_pos - lm.state.p_pos)))]
-            rew -= min(dists)
         """
 
         return rew
@@ -253,84 +236,42 @@ class Scenario(BaseScenario):
         return rew
 
     def observation(self, agent, world):
-        # get positions of all entities in this agent's reference frame
-        """ 
-        sorted_entities = []
-        for id, entity in enumerate(world.landmarks):  # world.entities:
-            distance = np.sqrt(np.sum(np.power(entity.state.p_pos - agent.state.p_pos, 2)))
-            if not len(sorted_entities):
+        if self.curriculum_learning:
+            sorted_entities = []
+            for id, entity in enumerate(world.landmarks):  # world.entities:
+                distance = np.sqrt(np.sum(np.power(entity.state.p_pos - agent.state.p_pos, 2)))
                 sorted_entities.append((distance, id, entity))
-                continue
-            for ix in range(len(sorted_entities)):
-                if distance <= sorted_entities[ix][0]:
-                    sorted_entities.insert(ix, (distance, id, entity))
-                    break
-                elif ix == len(sorted_entities) - 1:
-                    sorted_entities.append((distance, id, entity))
-                    break
-        """
-        """
-        sorted_agents = []
-        for id, other in enumerate(world.agents):  # world.entities:
-            if other is agent:
-                continue
+            sorted_entities.sort()
 
-            distance = np.sqrt(np.sum(np.power(other.state.p_pos - agent.state.p_pos, 2)))
-            if not len(sorted_agents):
+            sorted_agents = []
+            for id, other in enumerate(world.agents):  # world.entities:
+                if other is agent:
+                    continue
+                distance = np.sqrt(np.sum(np.power(other.state.p_pos - agent.state.p_pos, 2)))
                 sorted_agents.append((distance, id, other))
-                continue
-            for ix in range(len(sorted_agents)):
-                if distance <= sorted_agents[ix][0]:
-                    sorted_agents.insert(ix, (distance, id, other))
-                    break
-                elif ix == len(sorted_agents) - 1:
-                    sorted_agents.append((distance, id, other))
-                    break
+            sorted_agents.sort()
+            
+            reachable_entities = sorted_entities[:self.communication_reach]
+            reachable_agents = sorted_agents[:self.communication_reach - 1]
+            #landmark_ids = np.array([x[1] * (1 / (self.N - 1)) for x in reachable_entities])
+            landmark_delta = [x[2].state.p_pos - agent.state.p_pos for x in reachable_entities]
+            #agent_ids = np.array([x[1] * (1 / (self.N - 1)) for x in reachable_agents])
+            agent_delta_pos = [x[2].state.p_pos - agent.state.p_pos for x in reachable_agents]
+            #comm = [x[2].state.c for x in reachable_agents]
+            observation = np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + landmark_delta + agent_delta_pos)
+        else:
+            entity_pos = []
+            for entity in world.landmarks:
+                entity_pos.append(entity.state.p_pos - agent.state.p_pos)
+            
+            #comm = []
+            other_pos = []
+            for other in world.agents:
+                if other is agent:
+                    continue
+                #comm.append(other.state.c)
+                other_pos.append(other.state.p_pos - agent.state.p_pos)
 
-        #reachable_entities = sorted_entities[:self.communication_reach]
-        reachable_agents = sorted_agents[:self.communication_reach]
-        
-        #landmark_ids = np.array([x[1] * (1 / (self.N - 1)) for x in reachable_entities])
-        #landmark_delta = [x[2].state.p_pos - agent.state.p_pos for x in reachable_entities]
+            observation = np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos)
 
-        #agent_ids = np.array([x[1] * (1 / (self.N - 1)) for x in reachable_agents])
-        agent_delta_pos = [x[2].state.p_pos - agent.state.p_pos for x in reachable_agents]
-        agent_vel = [x[2].state.p_vel for x in reachable_agents]
-        
-        #comm = [x[2].state.c for x in reachable_agents]
-        """
-
-        
-        entity_pos = []
-        for entity in world.landmarks:
-            entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-
-
-        # communication of all other agents
-        other_pos = []
-        for other in world.agents:
-            if other is agent:
-                continue
-            #comm.append(other.state.c)
-            other_pos.append(other.state.p_pos - agent.state.p_pos)
-
-        """
-        print([agent.state.p_vel])
-        print([agent.state.p_pos])
-        print(entity_pos)
-        print(other_pos)
-        print(comm)
-        print("---")
-        """
-        #agent_id = int(agent.name.split("_")[1])
-        #landmark_delta = agent.state.p_pos - world.landmarks[agent_id].state.p_pos
-
-        observation = np.concatenate(
-            [agent.state.p_vel] + [agent.state.p_pos] + entity_pos
-            #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos
-            #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos + comm
-            #[agent.state.p_vel] + [agent.state.p_pos] + entity_pos
-            #[agent.state.p_vel] + [agent.state.p_pos] + [landmark_delta] 
-            #[agent.state.p_vel] + [agent.state.p_pos] + [landmark_delta] + agent_delta_pos + agent_vel
-        )
         return observation
